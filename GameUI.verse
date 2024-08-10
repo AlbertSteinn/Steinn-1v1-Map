@@ -143,33 +143,33 @@ GameUIModule := module:
             hud_identifier_world_resource_ingredient{}
 
         # Arrays of interactable UI Buttons
-        var MainMenuButtons:[]button_regular = array{}
-        var MapSpeedButtons:[]button_regular = array{}
-        var HealthButtons:[]button_regular = array{}
-        var RestartButtons:[]button_regular = array{}
-        var SpectateButtons:[]button_regular = array{}
-        var AllShieldsButtons:[]button_regular = array{}
-        var BalancedHealthButtons:[]button_regular = array{}
-        var CustomHealthButtons:[]button_regular = array{}
-        var SlowSpeedButtons:[]button_regular = array{}
-        var FastSpeedButtons:[]button_regular = array{}
+        var MainMenuButtons:[player][]button_regular = map{}
+        var MapSpeedButtons:[player][]button_regular = map{}
+        var HealthButtons:[player][]button_regular = map{}
+        var RestartButtons:[player][]button_regular = map{}
+        var SpectateButtons:[player][]button_regular = map{}
+        var AllShieldsButtons:[player][]button_regular = map{}
+        var BalancedHealthButtons:[player][]button_regular = map{}
+        var CustomHealthButtons:[player][]button_regular = map{}
+        var SlowSpeedButtons:[player][]button_regular = map{}
+        var FastSpeedButtons:[player][]button_regular = map{}
 
-        var CustomHealthSliders:[]slider_regular = array{}
+        var CustomHealthSliders:[player][]slider_regular = map{}
 
         # Menu Nodes, each representing a page in the mainmenu
-        var MainMenuNode:ui_list_node = ui_list_node{}
-        var MapSpeedMenuNode:ui_list_node = ui_list_node{}
-        var HealthMenuNode:ui_list_node = ui_list_node{}
-        var SpectateMenuNode:ui_list_node = ui_list_node{}
-        var RestartMenuNode:ui_list_node = ui_list_node{}
-        var AllShieldsMenuNode:ui_list_node = ui_list_node{}
-        var BalancedHealthMenuNode:ui_list_node = ui_list_node{}
-        var CustomHealthMenuNode:ui_list_node = ui_list_node{}
-        var SlowSpeedMenuNode:ui_list_node = ui_list_node{}
-        var FastSpeedMenuNode:ui_list_node = ui_list_node{}
+        var MainMenuNode:[player]ui_list_node = map{}
+        var MapSpeedMenuNode:[player]ui_list_node = map{}
+        var HealthMenuNode:[player]ui_list_node = map{}
+        var SpectateMenuNode:[player]ui_list_node = map{}
+        var RestartMenuNode:[player]ui_list_node = map{}
+        var AllShieldsMenuNode:[player]ui_list_node = map{}
+        var BalancedHealthMenuNode:[player]ui_list_node = map{}
+        var CustomHealthMenuNode:[player]ui_list_node = map{}
+        var SlowSpeedMenuNode:[player]ui_list_node = map{}
+        var FastSpeedMenuNode:[player]ui_list_node = map{}
 
         # Background for the menu
-        var Background:canvas = canvas{}
+        var Background:[player]canvas = map{}
         # A map of Nodes(Pages) with the ui buttons on the pages
         var MenuNodeMap:[ui_list_node][]button_regular = map{}
         # Number of players in the 1v1 zone
@@ -180,10 +180,6 @@ GameUIModule := module:
         var AllPlayers<public>:[]player = array{}
         # Instance of a class that manages player health
         var HealthManager<public>:healthmanager = healthmanager{}
-        # An array of ui slots for all players
-        var PlayerScoreSlots:[]stack_box_slot = array{}
-        # A map of players with ther scores
-        var PlayerScores<public>:[player]int = map{}
         # The current cinematic sequence device running
         var CurrentCinematic:cinematic_sequence_device = cinematic_sequence_device{}
         # The canvas for the 1v1 timer
@@ -193,10 +189,15 @@ GameUIModule := module:
         OnBegin<override>()<suspends>:void =
             InitializePlayers()
             InitializeSpawnPads()
-            InitializeUIButtons()
             InitializeMapMenu()
             MenuButton.InteractedWithEvent.Subscribe(OnMenuButtonPressed)
+            GetPlayspace().PlayerAddedEvent().Subscribe(OnPlayerJoiningMap)
 
+        # Called when player joins the game
+        OnPlayerJoiningMap(Agent:agent):void =
+            if(Player := player[Agent]):
+                InitializeUIButtons(Player)
+                AssignUI(Player) 
 
         # Hides HUD for Player. (Not working properly according to epic since it affects all players)
         HideHud(Player:player):void = {}
@@ -224,8 +225,8 @@ GameUIModule := module:
             if:
                 Player := player[Agent]
                 FortCharacter := Player.GetFortCharacter[]
-                ShieldSlider := CustomHealthSliders[0]
-                HealthSlider := CustomHealthSliders[1]
+                ShieldSlider := CustomHealthSliders[Player][0]
+                HealthSlider := CustomHealthSliders[Player][1]
             then:
                 FortCharacter.SetMaxShield(ShieldSlider.GetValue())
                 FortCharacter.SetMaxHealth(HealthSlider.GetValue())
@@ -252,50 +253,97 @@ GameUIModule := module:
 
         # Initializes all Menu Nodes and assigns ui buttons to them
         InitializeMapMenu():void =
-            set Background = ColorBlockCanvas()
-            set MainMenuNode =
-                ui_list_node:
-                    CurrentUI := MainMenu()
-            set MapSpeedMenuNode =
-                ui_list_node:
-                    Previous := option{MainMenuNode}
-                    CurrentUI := MapSpeedMenu()
-            set HealthMenuNode =
-                ui_list_node:
-                    Previous := option{MainMenuNode}
-                    CurrentUI := HealthMenu()
-            set SpectateMenuNode =
-                ui_list_node:
-                    CurrentUI := SpectateMenu()
-            set RestartMenuNode =
-                ui_list_node:
-                    CurrentUI := RestartMenu()
-            set AllShieldsMenuNode =
-                ui_list_node:
-                    CurrentUI := AllShieldsMenu()
-            set BalancedHealthMenuNode =
-                ui_list_node:
-                    CurrentUI := BalancedHealthMenu()
-            set CustomHealthMenuNode =
-                ui_list_node:
-                    CurrentUI := CustomHealthMenu()
-            set SlowSpeedMenuNode =
-                ui_list_node:
-                    CurrentUI := SlowSpeedMenu()
-            set FastSpeedMenuNode =
-                ui_list_node:
-                    CurrentUI := FastSpeedMenu()
-            if:
-                set MenuNodeMap[MainMenuNode] = MainMenuButtons
-                set MenuNodeMap[MapSpeedMenuNode] = MapSpeedButtons
-                set MenuNodeMap[HealthMenuNode] = HealthButtons
-                set MenuNodeMap[SpectateMenuNode] = SpectateButtons
-                set MenuNodeMap[RestartMenuNode] = RestartButtons
-                set MenuNodeMap[AllShieldsMenuNode] = AllShieldsButtons
-                set MenuNodeMap[BalancedHealthMenuNode] = BalancedHealthButtons
-                set MenuNodeMap[CustomHealthMenuNode] = CustomHealthButtons
-                set MenuNodeMap[SlowSpeedMenuNode] = SlowSpeedButtons
-                set MenuNodeMap[FastSpeedMenuNode] = FastSpeedButtons
+            for(Player:GetPlayers()):
+                OnPlayerJoiningMap(Player)
+
+        # Assigns all canvas UI to Player Maps
+        AssignUI(Player:player):void =
+            Canvas := ColorBlockCanvas()
+            option {set Background[Player] = Canvas}
+            var UI:canvas = MainMenu(Player)
+            option:
+                set MainMenuNode[Player] =
+                    ui_list_node:
+                        CurrentUI := UI
+            set UI = MapSpeedMenu(Player)
+            option:
+                set MapSpeedMenuNode[Player] =
+                    ui_list_node:
+                        Previous := option{MainMenuNode[Player]}
+                        CurrentUI := UI
+            set UI = HealthMenu(Player)
+            option:
+                set HealthMenuNode[Player] =
+                    ui_list_node:
+                        Previous := option{MainMenuNode[Player]}
+                        CurrentUI := UI
+            set UI = SpectateMenu(Player)
+            option:
+                set SpectateMenuNode[Player] =
+                    ui_list_node:
+                        CurrentUI := UI
+            set UI = RestartMenu(Player)
+            option:
+                set RestartMenuNode[Player] =
+                    ui_list_node:
+                        CurrentUI := UI
+            set UI = AllShieldsMenu(Player)
+            option:
+                set AllShieldsMenuNode[Player] =
+                    ui_list_node:
+                        CurrentUI := UI
+            set UI = BalancedHealthMenu(Player)
+            option:
+                set BalancedHealthMenuNode[Player] =
+                    ui_list_node:
+                        CurrentUI := UI
+            set UI = CustomHealthMenu(Player)
+            option:
+                set CustomHealthMenuNode[Player] =
+                    ui_list_node:
+                        CurrentUI := UI
+            set UI = SlowSpeedMenu(Player)
+            option:
+                set SlowSpeedMenuNode[Player] =
+                    ui_list_node:
+                        CurrentUI := UI
+            set UI = FastSpeedMenu(Player)
+            option:
+                set FastSpeedMenuNode[Player] =
+                    ui_list_node:
+                        CurrentUI := UI
+                    
+            option:
+                Buttons := MainMenuButtons[Player]
+                set MenuNodeMap[MainMenuNode[Player]] = Buttons
+            option:
+                Buttons := MapSpeedButtons[Player]
+                set MenuNodeMap[MapSpeedMenuNode[Player]] = Buttons
+            option:
+                Buttons := HealthButtons[Player]
+                set MenuNodeMap[HealthMenuNode[Player]] = Buttons
+            option:
+                Buttons := SpectateButtons[Player]
+                set MenuNodeMap[SpectateMenuNode[Player]] = Buttons
+            option:
+                Buttons := RestartButtons[Player]
+                set MenuNodeMap[RestartMenuNode[Player]] = Buttons
+            option:
+                Buttons := AllShieldsButtons[Player]
+                set MenuNodeMap[AllShieldsMenuNode[Player]] = Buttons
+            option:
+                Buttons := BalancedHealthButtons[Player]
+                set MenuNodeMap[BalancedHealthMenuNode[Player]] = Buttons
+            option:
+                Buttons := CustomHealthButtons[Player]
+                set MenuNodeMap[CustomHealthMenuNode[Player]] = Buttons
+            option:
+                Buttons :=  SlowSpeedButtons[Player]
+                set MenuNodeMap[SlowSpeedMenuNode[Player]] = Buttons
+            option:
+                Buttons := FastSpeedButtons[Player]
+                set MenuNodeMap[FastSpeedMenuNode[Player]] = Buttons
+
 
         
         # Creates a color block canvas
@@ -317,7 +365,7 @@ GameUIModule := module:
                         
 
         # Returns the main menu canvas
-        MainMenu():canvas =
+        MainMenu(Player:player):canvas =
             canvas:
                 Slots := array:
                     canvas_slot:
@@ -337,12 +385,12 @@ GameUIModule := module:
                         Widget := stack_box:
                                 Orientation := orientation.Vertical
                                 Slots := 
-                                    for(Button:MainMenuButtons):
+                                    for(Button:MainMenuButtons[Player]):
                                         stack_box_slot:
                                             Padding := margin{Bottom := 10.0}
                                             Widget := Button
         # Returns the map speed menu canvas
-        MapSpeedMenu():canvas =
+        MapSpeedMenu(Player:player):canvas =
             canvas:
                 Slots := array:
                     canvas_slot:
@@ -362,12 +410,12 @@ GameUIModule := module:
                         Widget := stack_box:
                             Orientation := orientation.Vertical
                             Slots := 
-                                for(Button:MapSpeedButtons):
+                                for(Button:MapSpeedButtons[Player]):
                                     stack_box_slot:
                                         Padding := margin{Bottom := 10.0}
                                         Widget := Button
         # Returns the health menu canvas                      
-        HealthMenu():canvas =
+        HealthMenu(Player:player):canvas =
             canvas:
                 Slots := array:
                     canvas_slot:
@@ -403,13 +451,13 @@ GameUIModule := module:
                         Widget := stack_box:
                             Orientation := orientation.Vertical
                             Slots := 
-                                for(Button:HealthButtons):
+                                for(Button:HealthButtons[Player]):
                                     stack_box_slot:
                                         Padding := margin{Bottom := 10.0}
                                         Widget := Button
 
         # Returns the Spectate menu canvas
-        SpectateMenu():canvas =
+        SpectateMenu(Player:player):canvas =
             canvas:
                 Slots := array:
                     canvas_slot:
@@ -437,13 +485,13 @@ GameUIModule := module:
                         Widget := stack_box:
                             Orientation := orientation.Horizontal
                             Slots := 
-                                for(Button:SpectateButtons):
+                                for(Button:SpectateButtons[Player]):
                                     stack_box_slot:
                                         Padding := margin{Left := 50.0, Right := 50.0}
                                         Widget := Button
         
         # Returns the Restart menu canvas
-        RestartMenu():canvas =
+        RestartMenu(Player:player):canvas =
             canvas:
                 Slots := array:
                     canvas_slot:
@@ -471,13 +519,13 @@ GameUIModule := module:
                         Widget := stack_box:
                             Orientation := orientation.Horizontal
                             Slots := 
-                                for(Button:RestartButtons):
+                                for(Button:RestartButtons[Player]):
                                     stack_box_slot:
                                         Padding := margin{Left := 50.0, Right := 50.0}
                                         Widget := Button
 
         # Returns the AllShields menu canvas
-        AllShieldsMenu(): canvas = 
+        AllShieldsMenu(Player:player): canvas = 
             canvas:
                 Slots := array:
                     canvas_slot:
@@ -497,13 +545,13 @@ GameUIModule := module:
                         Widget := stack_box:
                             Orientation := orientation.Vertical
                             Slots := 
-                                for(Button:AllShieldsButtons):
+                                for(Button:AllShieldsButtons[Player]):
                                     stack_box_slot:
                                         Padding := margin{Top := 10.0}
                                         Widget := Button
         
         # Returns the Balanced Health menu canvas
-        BalancedHealthMenu(): canvas =
+        BalancedHealthMenu(Player:player): canvas =
             canvas:
                 Slots := array:
                     canvas_slot:
@@ -523,14 +571,14 @@ GameUIModule := module:
                         Widget := stack_box:
                             Orientation := orientation.Vertical
                             Slots := 
-                                for(Button:BalancedHealthButtons):
+                                for(Button:BalancedHealthButtons[Player]):
                                     stack_box_slot:
                                         Padding := margin{Top := 10.0}
                                         Widget := Button
         
         # Returns the Balanced Health menu canvas
-        CustomHealthMenu(): canvas =
-            CreateUISliders()
+        CustomHealthMenu(Player:player): canvas =
+            CreateUISliders(Player)
             canvas:
                 Slots := array:
                     canvas_slot:
@@ -566,7 +614,7 @@ GameUIModule := module:
                         Widget := stack_box:
                             Orientation := orientation.Vertical
                             Slots :=
-                                for(Slider:CustomHealthSliders):
+                                for(Slider:CustomHealthSliders[Player]):
                                     stack_box_slot:
                                         Padding := margin{Top := 50.0}
                                         Widget := Slider
@@ -579,14 +627,14 @@ GameUIModule := module:
                         Widget := stack_box:
                             Orientation := orientation.Horizontal
                             Slots := 
-                                for(Button:CustomHealthButtons):
+                                for(Button:CustomHealthButtons[Player]):
                                     stack_box_slot:
                                         Padding := margin{Left := 25.0, Right := 25.0}
                                         Widget := Button
                                     
         
         # Returns the Slow Speed menu canvas
-        SlowSpeedMenu():canvas =
+        SlowSpeedMenu(Player:player):canvas =
             canvas:
                 Slots := array:
                     canvas_slot:
@@ -606,13 +654,13 @@ GameUIModule := module:
                         Widget := stack_box:
                             Orientation := orientation.Vertical
                             Slots := 
-                                for(Button:SlowSpeedButtons):
+                                for(Button:SlowSpeedButtons[Player]):
                                     stack_box_slot:
                                         Padding := margin{Top := 10.0}
                                         Widget := Button
-       
+
         # Returns the Fast Speed menu canvas
-        FastSpeedMenu():canvas =
+        FastSpeedMenu(Player:player):canvas =
             canvas:
                 Slots := array:
                     canvas_slot:
@@ -632,18 +680,16 @@ GameUIModule := module:
                         Widget := stack_box:
                             Orientation := orientation.Vertical
                             Slots := 
-                                for(Button:FastSpeedButtons):
+                                for(Button:FastSpeedButtons[Player]):
                                     stack_box_slot:
                                         Padding := margin{Top := 10.0}
                                         Widget := Button
 
         # Creates UI Sliders
-        CreateUISliders():void =
-            if:
-                Player := AllPlayers[0]
+        CreateUISliders(Player:player):void =
+            option:
                 FortCharacter := Player.GetFortCharacter[]
-            then:
-                set CustomHealthSliders = array:
+                set CustomHealthSliders[Player] = array:
                     slider_regular:
                         DefaultValue := FortCharacter.GetMaxShield()
                         # if minvalue is 0.0, player's can't get shield back with setmaxshield or setshield for some reason even
@@ -657,57 +703,56 @@ GameUIModule := module:
                         DefaultStepSize := 0.5
 
         # Initializes all UI buttons
-        InitializeUIButtons():void =
-            # Create and subscribe Buttons
-            # A tuple of []button_regulars is passed into the subscribe function
-            # The tuple contains MenuUIButtons, MapSpeedButtons, etc.
-            SubscribeUIButtons(
-                (set MainMenuButtons = 
+        InitializeUIButtons(Player:player):void =
+            Buttons := array:
+                Buttons1 := 
                     for(Text:MenuButtonNames):
                         Button := button_regular{DefaultText:=ToMessage(Text)}
-                ),
-                (set MapSpeedButtons =
+                Buttons2 := 
                     for(MapSpeed:MapSpeeds):
                         Text := MapSpeed.SpeedType
                         Button := button_regular{DefaultText:=ToMessage(Text)}
-                ),
-                (set HealthButtons = array:
+                Buttons3 := array:
                     button_regular{DefaultText:=ToMessage("All Shields")}
                     button_regular{DefaultText:=ToMessage("Balanced")}
                     button_regular{DefaultText:=ToMessage("Custom")}
                     button_regular{DefaultText:=ToMessage("Back")}
-                ),
-                (set AllShieldsButtons = array:
+                Buttons4 := array:
                     button_regular{DefaultText:=ToMessage("185")}
                     button_regular{DefaultText:=ToMessage("200")}
                     button_regular{DefaultText:=ToMessage("Back")}
-                ),
-                (set BalancedHealthButtons = array:
+                Buttons5 := array:
                     button_regular{DefaultText:=ToMessage("185")}
                     button_regular{DefaultText:=ToMessage("200")}
                     button_regular{DefaultText:=ToMessage("Back")}
-                ),
-                (set CustomHealthButtons = array:
+                Buttons6 := array:
                     button_regular{DefaultText:=ToMessage("Okay")}
                     button_regular{DefaultText:=ToMessage("Back")}
-                ),
-                (set RestartButtons = array:
+                Buttons7 := array:
                     button_regular{DefaultText:=ToMessage("Yes")}
-                    button_regular{DefaultText:=ToMessage("No")}
-                ),
-                (set SpectateButtons = array:
+                        button_regular{DefaultText:=ToMessage("No")}
+                Buttons8 := array:
                     button_regular{DefaultText:=ToMessage("Yes")}
-                    button_regular{DefaultText:=ToMessage("No")}
-                ),
-                (set SlowSpeedButtons =
+                        button_regular{DefaultText:=ToMessage("No")}
+                Buttons9 :=
                     for(Text:MapSpeeds[0].Speeds):
                         Button := button_regular{DefaultText:=ToMessage(Text)}
-                ),
-                (set FastSpeedButtons =
+                Buttons10 :=
                     for(Text:MapSpeeds[2].Speeds):
                         Button := button_regular{DefaultText:=ToMessage(Text)}
-                )
-            )
+
+            option {set MainMenuButtons[Player] = Buttons1}
+            option {set MapSpeedButtons[Player] = Buttons2}
+            option {set HealthButtons[Player] = Buttons3}
+            option {set AllShieldsButtons[Player] = Buttons4}
+            option {set BalancedHealthButtons[Player] = Buttons5}
+            option {set CustomHealthButtons[Player] = Buttons6}
+            option {set RestartButtons[Player] = Buttons7}
+            option {set SpectateButtons[Player] = Buttons8}
+            option {set SlowSpeedButtons[Player] = Buttons9}
+            option {set FastSpeedButtons[Player] = Buttons10}
+
+            SubscribeUIButtons(Buttons)
         
         # Subscribes UI Buttons
         SubscribeUIButtons(ButtonGroup:[][]button_regular):void =
@@ -726,98 +771,99 @@ GameUIModule := module:
         
         # Handles the actions of each UI Button
         HandleUIButtonClick(ClickedButton:text_button_base, Player:player, MenuUI:canvas):void =
-            if:
-                PlayerUI := GetPlayerUI[Player]
-            then:
+            if(PlayerUI := GetPlayerUI[Player]):
                 # Remove current Widget before showing another one
                 PlayerUI.RemoveWidget(MenuUI)
 
                 # Check if UI button is from main menu
-                if(ClickedButton = MainMenuButtons[0]):
+                if(ClickedButton = MainMenuButtons[Player][0], Node := MapSpeedMenuNode[Player]):
                     Print("Clicked on Map Menu")
-                    OpenMenu(Player, MapSpeedMenuNode)
-                else if(ClickedButton = MainMenuButtons[1]):
+                    OpenMenu(Player, Node)
+                else if(ClickedButton = MainMenuButtons[Player][1], Node := HealthMenuNode[Player]):
                     Print("Clicked on Health")
-                    OpenMenu(Player, HealthMenuNode)
-                else if(ClickedButton = MainMenuButtons[2]):
+                    OpenMenu(Player, Node)
+                else if(ClickedButton = MainMenuButtons[Player][2], Node := SpectateMenuNode[Player]):
                     Print("Clicked on Spectate")
-                    OpenMenu(Player, SpectateMenuNode)
-                else if(ClickedButton = MainMenuButtons[3]):
+                    OpenMenu(Player, Node)
+                else if(ClickedButton = MainMenuButtons[Player][3], Node := RestartMenuNode[Player]):
                     Print("Clicked on Restart")
-                    OpenMenu(Player, RestartMenuNode)
-                else if(ClickedButton = MainMenuButtons[MainMenuButtons.Length - 1]):
+                    OpenMenu(Player, Node)
+                else if(ClickedButton = MainMenuButtons[Player][MainMenuButtons[Player].Length - 1]):
                     Print("Clicked on Cancel")
                     RemoveMapMenuUI(Player)
 
                 # Check if UI button is from Map Speed menu
-                else if(ClickedButton = MapSpeedButtons[0]):
+                else if(ClickedButton = MapSpeedButtons[Player][0], Node := SlowSpeedMenuNode[Player]):
                     Print("Clicked on Slow Speed")
-                    OpenMenu(Player, SlowSpeedMenuNode)
-                else if(ClickedButton = MapSpeedButtons[1]):
+                    OpenMenu(Player, Node)
+                else if(ClickedButton = MapSpeedButtons[Player][1]):
                     Print("Clicked on Normal Speed")
                     Play(NormalCinematics)
                     NormalSpeedMessage.Activate(Player)
                     RemoveMapMenuUI(Player)
-                else if(ClickedButton = MapSpeedButtons[2]):
+                else if(ClickedButton = MapSpeedButtons[Player][2], Node := FastSpeedMenuNode[Player]):
                     Print("Clicked on Fast Speed")
-                    OpenMenu(Player, FastSpeedMenuNode)
+                    OpenMenu(Player, Node)
                 else if:
-                        ClickedButton = MapSpeedButtons[MapSpeedButtons.Length - 1]
+                        ClickedButton = MapSpeedButtons[Player][MapSpeedButtons[Player].Length - 1]
                         MaybeMapMenuUI[Player]?.Recede()
                 then:
                     Print("Clicked on Back")
                     OpenUI(Player)
 
                 # Check if UI button is from Health menu
-                else if(ClickedButton = HealthButtons[0]):
+                else if(ClickedButton = HealthButtons[Player][0], Node := AllShieldsMenuNode[Player]):
                     Print("Clicked on AllShields")
-                    OpenMenu(Player, AllShieldsMenuNode)
-                else if(ClickedButton = HealthButtons[1]):
+                    OpenMenu(Player, Node)
+                else if(ClickedButton = HealthButtons[Player][1], Node := BalancedHealthMenuNode[Player]):
                     Print("Clicked on Balanced Health")
-                    OpenMenu(Player, BalancedHealthMenuNode)
-                else if(ClickedButton = HealthButtons[2]):
+                    OpenMenu(Player, Node)
+                else if(ClickedButton = HealthButtons[Player][2]):
                     Print("Clicked on Custom")
-                    # Cutom Health Page has to be recreated on every click 
+                    # Custom Health Page has to be recreated on every click 
                     # to modify the slider default valueto current max health and shield
-                    set CustomHealthMenuNode =
-                        ui_list_node:
-                            CurrentUI := CustomHealthMenu()
-                    OpenMenu(Player, CustomHealthMenuNode)
+                    UI := CustomHealthMenu(Player)
+                    if:
+                        set CustomHealthMenuNode[Player] =
+                            ui_list_node:
+                                CurrentUI := UI
+                        Node := CustomHealthMenuNode[Player]
+                    then {OpenMenu(Player, Node)}
                 else if:
-                    ClickedButton = HealthButtons[HealthButtons.Length - 1]
+                    ClickedButton = HealthButtons[Player][HealthButtons[Player].Length - 1]
                     MaybeMapMenuUI[Player]?.Recede()
                 then:
                     Print("Clicked on Back")
                     OpenUI(Player)
 
                 # Check if UI button is from Spectate menu
-                else if(ClickedButton = SpectateButtons[0]):
+                else if(ClickedButton = SpectateButtons[Player][0]):
                     Print("Clicked on Yes")
                     SpectatorManager.ChangeClass(Player)
                     if(FortCharacter := Player.GetFortCharacter[]):
                         RemoveMapMenuUI(Player)
                         FortCharacter.Damage(Inf)
-                else if(ClickedButton = SpectateButtons[1]):
+                else if(ClickedButton = SpectateButtons[Player][1]):
                     Print("Clicked on No")
                     RemoveMapMenuUI(Player)
 
                 # Check if UI button is from Restart menu
-                else if(ClickedButton = RestartButtons[0]):
+                else if(ClickedButton = RestartButtons[Player][0]):
                     Print("Clicked on Yes")
                     RemoveMapMenuUI(Player)
                     Endgame.Activate(Player)
-                else if(ClickedButton = RestartButtons[1]):
+                else if(ClickedButton = RestartButtons[Player][1]):
                     Print("Clicked on No")
                     RemoveMapMenuUI(Player)
 
                 else:
                     var Index:int = 0
                     # Check if UI button is from AllShields menu
-                    for(Button:AllShieldsButtons):
+                    for(Button:AllShieldsButtons[Player]):
                         if(Button = ClickedButton):
                             Print("Clicked a button on AllShield")
                             if:
-                                Button = AllShieldsButtons[AllShieldsButtons.Length - 1]
+                                Button = AllShieldsButtons[Player][AllShieldsButtons[Player].Length - 1]
                                 MaybeMapMenuUI[Player]?.Recede()
                             then:
                                 Print("Clicked on Back")
@@ -827,18 +873,18 @@ GameUIModule := module:
                                     HealthManager.SetHealth(Health)
                                     HealthManager.SetHealthType(AllShields)
                                     HealthManager.ChangeHealth(AllPlayers)
-                                    CreateUISliders()
+                                    CreateUISliders(Player)
                                     RemoveMapMenuUI(Player)
                             return
                         set Index += 1
 
                     # Check if UI button is from Balanced Health menu
                     set Index = 0
-                    for(Button:BalancedHealthButtons):
+                    for(Button:BalancedHealthButtons[Player]):
                         if(Button = ClickedButton):
                             Print("Clicked a button on Balanced")
                             if:
-                                Button = BalancedHealthButtons[BalancedHealthButtons.Length - 1]
+                                Button = BalancedHealthButtons[Player][BalancedHealthButtons[Player].Length - 1]
                                 MaybeMapMenuUI[Player]?.Recede()
                             then:
                                 Print("Clicked on Back")
@@ -848,18 +894,18 @@ GameUIModule := module:
                                     HealthManager.SetHealth(Health)
                                     HealthManager.SetHealthType(BalancedHealth)
                                     HealthManager.ChangeHealth(AllPlayers)
-                                    CreateUISliders()
+                                    CreateUISliders(Player)
                                     RemoveMapMenuUI(Player)
                             return
                         set Index += 1
 
                     # Check if UI button is from Custom Health menu
                     set Index = 0
-                    for(Button:CustomHealthButtons):
+                    for(Button:CustomHealthButtons[Player]):
                         if(Button = ClickedButton):
                             Print("Clicked a button on Custom")
                             if:
-                                Button = CustomHealthButtons[CustomHealthButtons.Length - 1]
+                                Button = CustomHealthButtons[Player][CustomHealthButtons[Player].Length - 1]
                                 MaybeMapMenuUI[Player]?.Recede()
                             then:
                                 Print("Clicked on Back")
@@ -870,8 +916,8 @@ GameUIModule := module:
                                 for:
                                     InPlayer:AllPlayers
                                     FortCharacter := InPlayer.GetFortCharacter[]
-                                    ShieldSlider := CustomHealthSliders[0]
-                                    HealthSlider := CustomHealthSliders[1]
+                                    ShieldSlider := CustomHealthSliders[Player][0]
+                                    HealthSlider := CustomHealthSliders[Player][1]
                                 do:
                                     FortCharacter.SetMaxShield(ShieldSlider.GetValue())
                                     FortCharacter.SetMaxHealth(HealthSlider.GetValue())
@@ -881,10 +927,10 @@ GameUIModule := module:
 
                     # Check if UI button is from Slow Speed menu
                     set Index = 0
-                    for(Button:SlowSpeedButtons):
+                    for(Button:SlowSpeedButtons[Player]):
                         if(Button = ClickedButton):
                             if:
-                                Button = SlowSpeedButtons[SlowSpeedButtons.Length - 1]
+                                Button = SlowSpeedButtons[Player][SlowSpeedButtons[Player].Length - 1]
                                 MaybeMapMenuUI[Player]?.Recede()
                             then:
                                 Print("Clicked on Back")
@@ -902,10 +948,10 @@ GameUIModule := module:
 
                     # Check if UI button is from Fast Speed menu
                     set Index = 0
-                    for(Button:FastSpeedButtons):
+                    for(Button:FastSpeedButtons[Player]):
                         if(Button = ClickedButton):
                             if:
-                                Button = FastSpeedButtons[FastSpeedButtons.Length - 1]
+                                Button = FastSpeedButtons[Player][FastSpeedButtons[Player].Length - 1]
                                 MaybeMapMenuUI[Player]?.Recede()
                             then:
                                 Print("Clicked on Back")
@@ -927,8 +973,9 @@ GameUIModule := module:
             if:
                 PlayerUI := GetPlayerUI[Player]
                 set MaybeMapMenuUI[Player] = false
+                UIBackground := Background[Player]
             then:
-                PlayerUI.RemoveWidget(Background)
+                PlayerUI.RemoveWidget(UIBackground)
                 ShowHud(Player)
                 Print("Removed Menu from Player Map{}")
             
@@ -973,13 +1020,14 @@ GameUIModule := module:
             if:
                 Player := player[Agent]
                 PlayerUI := GetPlayerUI[Player]
-                MapMenuList := CreateUIList(MainMenuNode)
+                MapMenuList := CreateUIList(MainMenuNode[Player])
                 set MaybeMapMenuUI[Player] = option{MapMenuList}
+                UIBackground := Background[Player]
             then:
                 Print("Added Menu List to Player Map")
                 # For some reason, canvas and widgets are removed from player when another player triggers the function. 
                 # Basically transfers the widgets to the new triggering player
-                PlayerUI.AddWidget(Background)
+                PlayerUI.AddWidget(UIBackground)
                 HideHud(Player)
                 OpenUI(Player)
                 
@@ -989,3 +1037,6 @@ GameUIModule := module:
         ToMessage<localizes><public>(Text:string):message = "{Text}"
         # Convert Agent and string to message in this format
         ToMessage<localizes>(Agent:agent, Text:string):message = "{Agent} {Text}"
+
+        GetPlayers()<transacts>:[]player =
+            Game_UI_Manager{}.GetPlayspace().GetPlayers()
