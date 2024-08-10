@@ -189,6 +189,7 @@ GameUIModule := module:
         OnBegin<override>()<suspends>:void =
             InitializePlayers()
             InitializeSpawnPads()
+            Sleep(0.0)
             InitializeMapMenu()
             MenuButton.InteractedWithEvent.Subscribe(OnMenuButtonPressed)
             GetPlayspace().PlayerAddedEvent().Subscribe(OnPlayerJoiningMap)
@@ -225,8 +226,10 @@ GameUIModule := module:
             if:
                 Player := player[Agent]
                 FortCharacter := Player.GetFortCharacter[]
-                ShieldSlider := CustomHealthSliders[Player][0]
-                HealthSlider := CustomHealthSliders[Player][1]
+                # GetPlayers()[0] because player joining progress needs a value
+                # Hence, they can use the value of player they meet in map
+                ShieldSlider := CustomHealthSliders[GetPlayers()[0]][0]
+                HealthSlider := CustomHealthSliders[GetPlayers()[0]][1]
             then:
                 FortCharacter.SetMaxShield(ShieldSlider.GetValue())
                 FortCharacter.SetMaxHealth(HealthSlider.GetValue())
