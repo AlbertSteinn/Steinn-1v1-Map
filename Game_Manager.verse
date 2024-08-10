@@ -55,6 +55,8 @@ GameManagerModule<public> := module:
         # Time in seconds for awarding xp
         @editable
         Playtime:type{x:float where x > 60.0} = 600.0
+        @editable
+        RoundSettings:round_settings_device = round_settings_device{}
 
         # Number of players in the map excluding spectators
         var AllPlayers<public>:[]player = array{}
@@ -78,6 +80,7 @@ GameManagerModule<public> := module:
             InitializeMutatorZones()
             Initialize1v1()
             
+    
         
         # Initialize devices used in starting 1v1
         Initialize1v1():void =
@@ -175,13 +178,21 @@ GameManagerModule<public> := module:
         # Called when player joins the game
         OnPlayerJoiningMap(Agent:agent):void =
             Initialize(Agent)
+            
 
         # Called when player leaves the game
         OnPlayerLeavingMap(Agent:agent):void =
+            spawn {ToggleMatchmaking()} # Probably useless tbh lol
             if:
                 set ActiveMap[Agent] = false
                 Player := player[Agent]
                 set AllPlayers = AllPlayers.RemoveAllElements(Player)
+
+
+        ToggleMatchmaking()<suspends>:void =
+            RoundSettings.DisableMatchmaking()
+            Sleep(5.0)
+            RoundSettings.EnableMatchmaking()
 
         # Initializes agent
         Initialize(Agent:agent):void =
@@ -206,7 +217,7 @@ GameManagerModule<public> := module:
                 Player:GetPlayspace().GetPlayers()
                 Agent := agent[Player]
             do {Initialize(Agent)}
-                   
+
         # Initializes all button devices
         InitializeButtons():void =
             for(Button:ResetButtons):
@@ -274,7 +285,6 @@ GameManagerModule<public> := module:
                 Eliminator := Result.EliminatingCharacter?
                 Agent := Eliminator.GetAgent[]
                 Player := player[Agent]
-                set GameUI.PlayerScores[Player] += 1
             then:
                 Logger.Print("Granting Elimination xp")
                 Accolades.Elimination.Award(Agent)
@@ -352,4 +362,3 @@ GameManagerModule<public> := module:
             # For player to be falling, initialheight must be greater than finalheight
             # hence, negative result means player is still falling
             FinalHeight - InitialHeight
-
